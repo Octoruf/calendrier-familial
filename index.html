@@ -749,6 +749,20 @@
               </label>
             </div>
 
+            <!-- Choix du jour de répétition (visible quand la case est cochée) -->
+            <div class="form-group" id="repeatWeekdayGroup" style="display:none;">
+              <label for="repeatWeekday">Se répète tous les…</label>
+              <select id="repeatWeekday">
+                <option value="1">Lundis</option>
+                <option value="2">Mardis</option>
+                <option value="3">Mercredis</option>
+                <option value="4">Jeudis</option>
+                <option value="5">Vendredis</option>
+                <option value="6">Samedis</option>
+                <option value="0">Dimanches</option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label for="description">Description (facultatif)</label>
               <textarea id="description" rows="3" placeholder="Quelques détails…"></textarea>
@@ -1126,20 +1140,34 @@
       return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
     }
 
+    // Renvoie la date la plus proche (>= iso) qui tombe le jour cible
+    // (0 = dimanche, 1 = lundi, … 6 = samedi).
+    function nextWeekdayDate(iso, targetDay) {
+      const d = new Date(iso + "T00:00:00");
+      const diff = (targetDay - d.getDay() + 7) % 7;
+      d.setDate(d.getDate() + diff);
+      return toISO(d);
+    }
+
     // Renvoie la liste des dates où un événement doit apparaître entre
     // startISO et endISO (toutes les semaines si repeatWeekly est coché,
     // sinon null -> l'événement n'apparaît qu'à sa date).
+    // NB : on utilise setDate() et pas des millisecondes fixes, pour que les
+    // événements ne se décalent pas d'un jour lors du changement d'heure.
     function weeklyOccurrences(e, startISO, endISO) {
       if (!e.repeatWeekly) return null;
-      const DAY = 86400000;
-      const base = new Date(e.date + "T00:00:00").getTime();
-      const start = new Date(startISO + "T00:00:00").getTime();
-      const end = new Date(endISO + "T00:00:00").getTime();
+      const base = new Date(e.date + "T00:00:00");
+      const start = new Date(startISO + "T00:00:00");
+      const end = new Date(endISO + "T00:00:00");
+      // Nombre de semaines à avancer pour atteindre la première occurrence
+      const dayDiff = Math.round((start - base) / 86400000);
+      const k = Math.max(0, Math.ceil(dayDiff / 7));
+      const d = new Date(base);
+      d.setDate(d.getDate() + k * 7);
       const dates = [];
-      // Premier multiple de 7 jours >= start
-      let k = base < start ? Math.ceil((start - base) / (7 * DAY)) : 0;
-      for (let t = base + k * 7 * DAY; t <= end; t += 7 * DAY) {
-        dates.push(toISO(new Date(t)));
+      while (d <= end) {
+        dates.push(toISO(d));
+        d.setDate(d.getDate() + 7);
       }
       return dates;
     }
@@ -1241,6 +1269,11 @@
       document.getElementById("endTime").value = e.endTime || "";
       document.getElementById("description").value = e.description || "";
       document.getElementById("repeatWeekly").checked = !!e.repeatWeekly;
+      // Le sélecteur de jour prend le jour de la date de l'événement
+      const wd = e.date ? new Date(e.date + "T00:00:00").getDay() : new Date().getDay();
+      document.getElementById("repeatWeekday").value = String(wd);
+      document.getElementById("repeatWeekdayGroup").style.display =
+        e.repeatWeekly ? "block" : "none";
     }
 
     function readFormFields() {
@@ -1251,6 +1284,7 @@
         endTime: document.getElementById("endTime").value,
         description: document.getElementById("description").value.trim(),
         repeatWeekly: document.getElementById("repeatWeekly").checked,
+        repeatWeekday: document.getElementById("repeatWeekday").value,
       };
     }
 
@@ -1271,6 +1305,7 @@
         document.getElementById(id).readOnly = !editable;
       });
       document.getElementById("repeatWeekly").disabled = !editable;
+      document.getElementById("repeatWeekday").disabled = !editable;
       document.getElementById("btnSubmit").textContent = editable
         ? editingId ? "Enregistrer" : "Ajouter"
         : "Modifier";
@@ -1339,6 +1374,13 @@
       }
 
       const fields = readFormFields();
+
+      // Si l'événement se répète chaque semaine, on cale la date sur le
+      // jour choisi (ex. « tous les lundis »).
+      if (fields.repeatWeekly) {
+        fields.date = nextWeekdayDate(fields.date, parseInt(fields.repeatWeekday, 10));
+        document.getElementById("date").value = fields.date; // garde l'interface cohérente
+      }
 
       try {
         if (editingId) {
@@ -1513,6 +1555,17 @@
 
     document.getElementById("btnCloseModal").addEventListener("click", closeModal);
     document.getElementById("btnCancel").addEventListener("click", closeModal);
+
+    // Affiche/masque le choix du jour quand on coche « répéter chaque semaine »
+    document.getElementById("repeatWeekly").addEventListener("change", () => {
+      const on = document.getElementById("repeatWeekly").checked;
+      document.getElementById("repeatWeekdayGroup").style.display = on ? "block" : "none";
+      if (on) {
+        const d = document.getElementById("date").value;
+        const wd = d ? new Date(d + "T00:00:00").getDay() : new Date().getDay();
+        document.getElementById("repeatWeekday").value = String(wd);
+      }
+    });
 
     // Clic sur le fond du modal pour fermer
     document.getElementById("eventModal").addEventListener("click", ev => {
