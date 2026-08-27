@@ -743,6 +743,13 @@
             </div>
 
             <div class="form-group">
+              <label for="repeatWeekly" style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.95rem;font-weight:600;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                <input type="checkbox" id="repeatWeekly" style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">
+                🔁 Répéter chaque semaine
+              </label>
+            </div>
+
+            <div class="form-group">
               <label for="description">Description (facultatif)</label>
               <textarea id="description" rows="3" placeholder="Quelques détails…"></textarea>
             </div>
@@ -892,7 +899,7 @@
       }
       const { data, error } = await supabaseClient
         .from("events")
-        .select("id, title, date, start_time, end_time, description, owner");
+        .select("id, title, date, start_time, end_time, description, owner, repeat_weekly");
       if (error) throw error;
       return (data || []).map(snakeToCamel);
     }
@@ -906,7 +913,8 @@
         startTime: row.start_time || "",
         endTime: row.end_time || "",
         description: row.description || "",
-        owner: row.owner
+        owner: row.owner,
+        repeatWeekly: !!row.repeat_weekly
       };
     }
 
@@ -919,7 +927,8 @@
         start_time: e.startTime || null,
         end_time: e.endTime || null,
         description: e.description || "",
-        owner: e.owner
+        owner: e.owner,
+        repeat_weekly: !!e.repeatWeekly
       };
     }
 
@@ -1050,10 +1059,14 @@
       const daysPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
       const today = todayStr();
-      const filtered = filterEvents(events);
-      const byDate = groupByDate(filtered);
-
       const totalCells = Math.ceil((startWeekday + daysInMonth) / 7) * 7;
+
+      // Première et dernière date affichées dans la grille (pour générer les
+      // occurrences des événements hebdomadaires).
+      const gridStart = new Date(currentYear, currentMonth, 1 - startWeekday);
+      const gridEnd = new Date(currentYear, currentMonth, 1 - startWeekday + totalCells - 1);
+      const filtered = filterEvents(events);
+      const byDate = groupByDateInRange(filtered, toISO(gridStart), toISO(gridEnd));
 
       for (let i = 0; i < totalCells; i++) {
         let dayNum, cellMonth;
@@ -1094,16 +1107,41 @@
       return list.filter(e => e.owner === filterMember);
     }
 
-    // Groupe les événements par date ("YYYY-MM-DD" -> tableau).
-    function groupByDate(list) {
+    // Groupe les événements par date ("YYYY-MM-DD" -> tableau), en générant
+    // les occurrences des événements cochés « répéter chaque semaine ».
+    function groupByDateInRange(list, startISO, endISO) {
       const map = {};
       list.forEach(e => {
-        (map[e.date] = map[e.date] || []).push(e);
+        const dates = weeklyOccurrences(e, startISO, endISO);
+        (dates || [e.date]).forEach(d => { (map[d] = map[d] || []).push(e); });
       });
       // Tri par heure de début puis par titre
       Object.values(map).forEach(arr =>
         arr.sort((a, b) => (a.startTime || "99").localeCompare(b.startTime || "99")));
       return map;
+    }
+
+    // Convertit une date Date() en "YYYY-MM-DD".
+    function toISO(d) {
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+
+    // Renvoie la liste des dates où un événement doit apparaître entre
+    // startISO et endISO (toutes les semaines si repeatWeekly est coché,
+    // sinon null -> l'événement n'apparaît qu'à sa date).
+    function weeklyOccurrences(e, startISO, endISO) {
+      if (!e.repeatWeekly) return null;
+      const DAY = 86400000;
+      const base = new Date(e.date + "T00:00:00").getTime();
+      const start = new Date(startISO + "T00:00:00").getTime();
+      const end = new Date(endISO + "T00:00:00").getTime();
+      const dates = [];
+      // Premier multiple de 7 jours >= start
+      let k = base < start ? Math.ceil((start - base) / (7 * DAY)) : 0;
+      for (let t = base + k * 7 * DAY; t <= end; t += 7 * DAY) {
+        dates.push(toISO(new Date(t)));
+      }
+      return dates;
     }
 
     // HTML d'un petit événement dans une case du jour.
@@ -1202,6 +1240,7 @@
       document.getElementById("startTime").value = e.startTime || "";
       document.getElementById("endTime").value = e.endTime || "";
       document.getElementById("description").value = e.description || "";
+      document.getElementById("repeatWeekly").checked = !!e.repeatWeekly;
     }
 
     function readFormFields() {
@@ -1211,6 +1250,7 @@
         startTime: document.getElementById("startTime").value,
         endTime: document.getElementById("endTime").value,
         description: document.getElementById("description").value.trim(),
+        repeatWeekly: document.getElementById("repeatWeekly").checked,
       };
     }
 
@@ -1230,6 +1270,7 @@
       ["title", "date", "startTime", "endTime", "description"].forEach(id => {
         document.getElementById(id).readOnly = !editable;
       });
+      document.getElementById("repeatWeekly").disabled = !editable;
       document.getElementById("btnSubmit").textContent = editable
         ? editingId ? "Enregistrer" : "Ajouter"
         : "Modifier";
@@ -1270,7 +1311,7 @@
         await supabaseClient.functions.invoke("send-push", {
           body: {
             title: action === "created" ? "Nouvel événement familial" : "Événement modifié",
-            body: `${eventData.title} · ${formatDateFr(eventData.date)}${eventData.startTime ? ` à ${formatTime(eventData.startTime)}` : ""}`,
+            body: `${eventData.title}${eventData.repeatWeekly ? " (chaque semaine)" : ""} · ${formatDateFr(eventData.date)}${eventData.startTime ? ` à ${formatTime(eventData.startTime)}` : ""}`,
             url: "./",
             tag: `event-${eventData.id}`,
             excludeMember: currentMember?.id || null
@@ -1391,7 +1432,7 @@
     function openTodayView() {
       document.getElementById("todayView").classList.add("open");
       const today = todayStr();
-      const list = groupByDate(events)[today] || [];
+      const list = (groupByDateInRange(events, today, today))[today] || [];
       const container = document.getElementById("todayList");
 
       if (list.length === 0) {
