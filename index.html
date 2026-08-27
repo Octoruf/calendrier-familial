@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notre calendrier familial</title>
+  <style>
+    /* ==========================================================================
+       PALETTE DE COULEURS FAMILIALE
+       Chaque membre de la famille a sa couleur (douce / pastel).
+       ========================================================================== */
+    :root {
+      /* Couleurs des personnes */
+      --alex:        #3b82f6;   /* Bleu    */
+      --alyssa:      #c026d3;   /* Rose/violet */
+      --papa:        #16a34a;   /* Vert    */
+      --maman:       #ea580c;   /* Orange  */
+
+      /* Nuances pastel (fond doux des événements) */
+      --alex-bg:     #dbeafe;
+      --alyssa-bg:   #fae8ff;
+      --papa-bg:     #dcfce7;
+      --maman-bg:    #ffedd5;
+
+      /* Couleurs de base */
+      --bg:           #f6f7fb;
+      --surface:      #ffffff;
+      --text:         #1e293b;
+      --text-muted:   #64748b;
+      --border:       #e2e8f0;
+      --primary:      #6366f1;
+      --primary-dark: #4f46e5;
+      --danger:       #dc2626;
+      --radius:       16px;
+      --shadow:       0 4px 20px rgba(15, 23, 42, 0.06);
+      --shadow-lg:    0 12px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { position: relative; z-index: 1; }
+
+    /* ------------------------- Écran d'accueil ------------------------- */
+    .home-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      animation: fadeUp 0.5s ease;
+    }
+
+    .home-screen h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .home-screen .subtitle {
+      color: var(--text-muted);
+      margin: 0 0 32px;
+      font-size: 1rem;
+    }
+
+    .member-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .member-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 28px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .member-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .member-card .avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .member-card .name { font-size: 1.15rem; font-weight: 600; }
+    .member-card .role { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* ------------------------- Calendrier ------------------------- */
+    .calendar-screen { display: none; }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .who {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+    }
+
+    .who .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .calendar-header .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover { background: #f1f5f9; }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+
+    .btn-ghost { background: transparent; }
+
+    .btn-sm { padding: 6px 10px; font-size: 0.82rem; border-radius: 8px; }
+
+    /* Barre de navigation du mois */
+    .month-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 16px 20px 8px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .month-bar h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.01em;
+      min-width: 180px;
+      text-align: center;
+      text-transform: capitalize;
+    }
+
+    .nav-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.15s ease;
+    }
+    .nav-btn:hover { background: #f1f5f9; }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 4px 20px 12px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .toolbar select {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    /* Grille du calendrier */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 8px 20px 40px;
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 6px 0;
+    }
+
+    .day {
+      min-height: 120px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      overflow: hidden;
+    }
+
+    .day:hover { box-shadow: var(--shadow); border-color: #cbd5e1; }
+
+    .day.other-month { background: #fbfcfe; opacity: 0.55; }
+
+    .day-number {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      align-self: flex-end;
+    }
+
+    /* Indicateur visuel du jour actuel */
+    .day.today .day-number {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .mini-event {
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-left: 3px solid var(--owner-color, var(--primary));
+      background: var(--owner-bg, #eef2ff);
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ------------------------- Modal ------------------------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 18px;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: scaleIn 0.22s ease;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 0;
+    }
+
+    .modal-header h3 { margin: 0; font-size: 1.15rem; }
+
+    .close-x {
+      border: none;
+      background: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+    .close-x:hover { color: var(--text); }
+
+    .modal-body { padding: 16px 20px 20px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .owner-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .owner-badge .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 6px;
+    }
+
+    .btn-danger { background: var(--danger) !important; border-color: var(--danger) !important; color: #fff !important; }
+
+    .owner-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .owner-row .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .owner-row .meta { line-height: 1.3; }
+    .owner-row .meta .name { font-weight: 600; font-size: 0.95rem; }
+    .owner-row .meta .created { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* ------------------------- Overlay chargement / statut ------------------------- */
+    .status-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(246, 247, 251, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      backdrop-filter: blur(2px);
+    }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      padding: 28px 34px;
+      max-width: 420px;
+      text-align: center;
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .status-card .btn { margin-top: 14px; }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ------------------------- Notifications ------------------------- */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 100;
+      width: min(90vw, 420px);
+    }
+
+    .toast {
+      background: var(--text);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      font-size: 0.9rem;
+      animation: slideUp 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+    .toast.info { background: var(--text); }
+
+    /* ------------------------- Vue "Aujourd'hui" ------------------------- */
+    .today-view {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+    }
+
+    .today-view.open { display: block; animation: fadeIn 0.2s ease; }
+
+    .today-card {
+      position: absolute;
+      right: 16px;
+      top: 90px;
+      width: min(360px, 92vw);
+      max-height: 70vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    .today-card h3 { margin: 0 0 12px; font-size: 1.05rem; }
+
+    .today-event {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .today-event:hover { background: #f8fafc; }
+
+    .today-event .time {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 48px;
+    }
+
+    .today-event .title { font-size: 0.9rem; font-weight: 500; }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px 12px;
+      font-size: 0.9rem;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 20px;
+      max-width: 1100px;
+      margin: 0 auto 4px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-item .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .legend-item.active { font-weight: 700; color: var(--text); }
+
+    /* ------------------------- Animations ------------------------- */
+    @keyframes fadeUp  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+    /* ------------------------- Responsive ------------------------- */
+    @media (max-width: 768px) {
+      .calendar-grid { gap: 4px; padding: 6px 8px 30px; }
+      .day { min-height: 80px; padding: 4px; }
+      .calendar-header { padding: 12px 14px; }
+      .month-bar, .toolbar, .legend { padding-left: 14px; padding-right: 14px; }
+      .form-row { grid-template-columns: 1fr; }
+      .today-card { left: 16px; right: 16px; width: auto; top: 200px; }
+      .mini-event { font-size: 0.66rem; padding: 1px 4px; }
+    }
+  </style>
+  <!-- SDK Supabase (chargé depuis le CDN officiel) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- =====================================================================
+       PWA — Obligatoire pour que le site soit installable comme une app
+       mobile (écran d'accueil, mode plein écran standalone).
+       ⚠️ L'installation & le service worker nécessitent HTTPS (ou localhost).
+       En ouvrant simplement index.html en file://, l'installation ne sera pas
+       proposée par le navigateur — un simple hébergement (GitHub Pages,
+       Netlify…) suffit.
+       ===================================================================== -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- Icône affichée par iOS/Safari lors de l'ajout à l'écran d'accueil -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- Pour changer le fond du splash screen iOS entre 180px et plus -->
+  <meta name="theme-color" content="#6366f1">
+  <!-- Android/Chrome : installer comme une application avec sa propre fenêtre -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- iOS/Safari : autoriser le mode standalone (plein écran, sans barre navigateur) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Calendrier">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ====================================================================
+         ÉCRAN D'ACCUEIL — choix du compte
+         ==================================================================== -->
+    <section id="homeScreen" class="home-screen">
+      <h1>📅 Notre calendrier familial</h1>
+      <p class="subtitle">Qui es-tu ? Choisis ton compte pour continuer.</p>
+
+      <div class="member-grid" id="memberGrid">
+        <!-- Les 4 cartes sont générées par JavaScript pour rester simple à maintenir -->
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         ÉCRAN CALENDRIER
+         ==================================================================== -->
+    <section id="calendarScreen" class="calendar-screen">
+      <header class="calendar-header">
+        <div class="who">
+          <div class="avatar" id="headerAvatar">A</div>
+          <span id="headerName"></span>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnTodayView" title="Voir les événements d'aujourd'hui">Aujourd'hui</button>
+          <button class="btn" id="btnSwitchAccount">Changer de compte</button>
+        </div>
+      </header>
+
+      <!-- Barre de navigation du mois -->
+      <div class="month-bar">
+        <button class="nav-btn" id="btnPrev" title="Mois précédent" aria-label="Mois précédent">◀</button>
+        <h2 id="monthTitle">—</h2>
+        <button class="nav-btn" id="btnNext" title="Mois suivant" aria-label="Mois suivant">▶</button>
+      </div>
+
+      <!-- Barre d'outils : bouton ajouter + filtre -->
+      <div class="toolbar">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnAddSmall">＋ Ajouter un événement</button>
+          <button class="btn" id="btnEnableNotifications" style="display:none;">🔔 Activer les notifications</button>
+        </div>
+        <div>
+          <label for="filter" style="font-size:0.82rem;color:var(--text-muted);margin-right:6px;">Filtrer :</label>
+          <select id="filter">
+            <option value="all">Tout le monde</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Légende des couleurs -->
+      <div class="legend" id="legend"></div>
+
+      <!-- Grille des jours -->
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </section>
+
+    <!-- ====================================================================
+         VUE "AUJOURD'HUI" (panneau latéral)
+         ==================================================================== -->
+    <div id="todayView" class="today-view">
+      <div class="today-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3>📌 Aujourd'hui</h3>
+          <button class="close-x" id="btnCloseToday">&times;</button>
+        </div>
+        <div id="todayList"></div>
+      </div>
+      <!-- Clic sur le fond pour fermer -->
+    </div>
+
+    <!-- ====================================================================
+         MODAL — création / édition d'événement
+         ==================================================================== -->
+    <div id="eventModal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modalTitle">Nouvel événement</h3>
+          <button class="close-x" id="btnCloseModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="eventForm">
+            <input type="hidden" id="eventId">
+
+            <!-- Personne qui crée (en lecture seule ici, déduite du compte sélectionné) -->
+            <div class="owner-row" id="ownerRow"></div>
+
+            <div class="form-group">
+              <label for="title">Titre de l'événement</label>
+              <input type="text" id="title" required placeholder="Ex. Dentiste, Match de foot, Anniversaire…">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" required>
+              </div>
+              <div class="form-group">
+                <label for="startTime">Heure de début</label>
+                <input type="time" id="startTime">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="endTime">Heure de fin (facultatif)</label>
+              <input type="time" id="endTime">
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description (facultatif)</label>
+              <textarea id="description" rows="3" placeholder="Quelques détails…"></textarea>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" id="btnDelete" style="display:none;margin-right:auto;background:var(--danger);border-color:var(--danger);color:#fff;" onclick="deleteFromModal()">Supprimer</button>
+              <button type="button" class="btn" id="btnCancel">Annuler</button>
+              <button type="submit" class="btn btn-primary" id="btnSubmit">Ajouter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL — confirmation de suppression
+         ==================================================================== -->
+    <div id="deleteModal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-body">
+          <h3 style="margin:0 0 8px;">Supprimer cet événement ?</h3>
+          <p style="color:var(--text-muted);margin:0 0 16px;" id="deleteText"></p>
+          <div class="modal-footer">
+            <button class="btn" id="btnCancelDelete">Annuler</button>
+            <button class="btn" id="btnConfirmDelete" style="background:var(--danger);border-color:var(--danger);color:#fff;">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conteneur des notifications -->
+    <div class="toast-container" id="toasts"></div>
+
+    <!-- ====================================================================
+         OVERLAY — chargement / statut (connexion Supabase)
+         ==================================================================== -->
+    <div id="statusOverlay" class="status-overlay" style="display:none;">
+      <div class="status-card">
+        <div class="spinner" id="statusSpinner"></div>
+        <div id="statusMessage"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       DONNÉES — LES MEMBRES DE LA FAMILLE
+       Chaque membre a un identifiant, un prénom, une couleur et fait référence à
+       des lignes CSS définies plus haut (variables --alex, --alyssa, etc.).
+       Ajouter un membre ici suffit pour qu'il apparaisse partout.
+       ========================================================================== */
+    const MEMBERS = {
+      alex:   { id: "alex",   name: "Alex",   role: "Enfant",
+                color: getCssVar("--alex"),   softBg: getCssVar("--alex-bg") },
+      alyssa: { id: "alyssa", name: "Alyssa", role: "Enfant",
+                color: getCssVar("--alyssa"), softBg: getCssVar("--alyssa-bg") },
+      papa:   { id: "papa",   name: "Papa",   role: "Parent",
+                color: getCssVar("--papa"),   softBg: getCssVar("--papa-bg") },
+      maman:  { id: "maman",  name: "Maman",  role: "Parent",
+                color: getCssVar("--maman"),  softBg: getCssVar("--maman-bg") }
+    };
+
+    function getCssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    /* ==========================================================================
+       Données : état courant de l'application
+       ========================================================================== */
+    let currentMember = null;        // membre sélectionné (objet MEMBERS)
+    let currentYear;                 // année affichée
+    let currentMonth;                // mois affiché (0-11)
+    let editingId = null;            // id de l'événement en cours d'édition
+    let filterMember = "all";        // filtre d'affichage
+
+    const MONTHS = ["janvier","février","mars","avril","mai","juin",
+                    "juillet","août","septembre","octobre","novembre","décembre"];
+    const WEEKDAYS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+    /* ==========================================================================
+       PERSISTANCE — SUPABASE
+
+       IMPORTANT — SYNCHRONISATION MULTI-APPAREILS :
+       Les travaux sont désormais stockés dans Supabase (une base de données en
+       ligne). Tous les appareils qui ouvrent cette page partagent le même
+       calendrier : lorsqu'un membre ajoute, modifie ou supprime un événement,
+       la modification apparaît partout (pense à rafraîchir/rouvrir la page pour
+       voir les changements des autres).
+
+       IMPORTANT — CONFIGURATION à faire une fois :
+       1. Crée un projet gratuit sur https://supabase.com → écrit « Notour
+          calendars familial ».
+       2. Dans le tableau de bord, ouvre « SQL Editor » et exécute le contenu du
+          fichier « supabase-schema.sql » livré avec ce projet (il crée la table
+          « events » ainsi que les permissions d'accès pour l'application).
+       3. Dans « Project Settings → API », copie les deux valeurs :
+            - Project URL :    https://XXXX.supabase.co
+            - anon public key : eyJ...
+          Puis colle-les dans les constantes SUPABASE_URL et SUPABASE_ANON_KEY
+          ci-dessous.
+
+       LE CODE :
+       Ce calendrier est conçu pour fonctionner SANS compte utilisateur : la clé
+       « anon » (publique) est utilisée, et les règles de sécurité (RLS) du
+       fichier supabase-schema.sql autorisent cette clé à lire/écrire dans la
+       table « events ». Aucun login n'est requis — parfait pour une famille.
+
+       Structure d'un événement (table Supabase « events ») :
+         id TEXT        (généré côté client, unique)
+         title TEXT
+         date TEXT       ("YYYY-MM-DD")
+         start_time TEXT ("HH:MM" ou NULL)
+         end_time TEXT   ("HH:MM" ou NULL)
+         description TEXT
+         owner TEXT      (nom du membre : alex, alyssa, papa, maman)
+         created_at TIMESTAMPTZ
+       ========================================================================== */
+
+    // ----------------------------------------------------------------
+    // CONFIGURATION SUPABASE — COLLE TES 2 VALEURS ICI
+    // ----------------------------------------------------------------
+    const SUPABASE_URL = "https://kvigsnhhpxvrevwuodzx.supabase.co";   // Project URL
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2aWdzbmhocHh2cmV2d3VvZHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NDUyMTMsImV4cCI6MjEwMzQyMTIxM30.IBKV4UBgUDM4V-hpyLQ9F8WxL8PxDw8stgPxJvT4Y5g";  // anon public key
+
+    // Le SDK Supabase est chargé via CDN dans le <head> (voir plus haut).
+    const SUPABASE_CONFIG_PRESENT =
+      SUPABASE_URL.includes("VOTRE-PROJET") || SUPABASE_ANON_KEY.includes("COLLEZ-VOTRE");
+
+    let supabaseClient = null;
+
+    // Initialise le client Supabase. Retourne true si c'est OK.
+    function initSupabase() {
+      if (!SUPABASE_CONFIG_PRESENT && window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
+      }
+      return false;
+    }
+
+    // Stockage en mémoire des événements actuels.
+    let events = [];
+
+    // Chargement initial : récupère tous les événements depuis Supabase.
+    async function loadEvents() {
+      if (!supabaseClient) {
+        throw new Error("Supabase non configuré");
+      }
+      const { data, error } = await supabaseClient
+        .from("events")
+        .select("id, title, date, start_time, end_time, description, owner");
+      if (error) throw error;
+      return (data || []).map(snakeToCamel);
+    }
+
+    // Convertit une ligne Supabase (snake_case) en objet interne (camelCase).
+    function snakeToCamel(row) {
+      return {
+        id: row.id,
+        title: row.title,
+        date: row.date,
+        startTime: row.start_time || "",
+        endTime: row.end_time || "",
+        description: row.description || "",
+        owner: row.owner
+      };
+    }
+
+    // Convertit un objet interne (camelCase) en ligne Supabase (snake_case).
+    function camelToSnake(e) {
+      return {
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        start_time: e.startTime || null,
+        end_time: e.endTime || null,
+        description: e.description || "",
+        owner: e.owner
+      };
+    }
+
+    /* ==========================================================================
+       UTILITAIRES
+       ========================================================================== */
+    function todayStr() {
+      const d = new Date();
+      return d.toISOString().slice(0, 10);
+    }
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function formatTime(t) { return t ? t.slice(0, 5) : ""; }
+
+    // Formate une date ISO "YYYY-MM-DD" en texte français lisible.
+    function formatDateFr(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return `${d} ${MONTHS[m - 1]} ${y}`;
+    }
+
+    // Renvoie HTML d'initiales (première lettre du prénom).
+    function initials(member) { return member.name.charAt(0); }
+
+    /* ==========================================================================
+       ÉCRAN D'ACCUEIL : construction des 4 cartes
+       ========================================================================== */
+    function buildHome() {
+      const grid = document.getElementById("memberGrid");
+      grid.innerHTML = "";
+      Object.values(MEMBERS).forEach(member => {
+        const card = document.createElement("div");
+        card.className = "member-card";
+        card.innerHTML = `
+          <div class="avatar" style="background:${member.color};">${initials(member)}</div>
+          <div class="name">${member.name}</div>
+          <div class="role">${member.role}</div>
+        `;
+        card.addEventListener("click", () => selectMember(member));
+        grid.appendChild(card);
+      });
+    }
+
+    // Sélectionne un membre et affiche le calendrier.
+    async function selectMember(member) {
+      currentMember = member;
+      document.getElementById("homeScreen").style.display = "none";
+      document.getElementById("calendarScreen").style.display = "block";
+      updateWhoHeader();
+      buildFilterOptions();
+      updateLegend();
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth();
+
+      showLoading(true);
+      try {
+        events = await loadEvents();
+        renderCalendar();
+      } catch (err) {
+        console.error("Erreur de chargement des événements :", err);
+        if (SUPABASE_CONFIG_PRESENT) {
+          setStatusMessage(
+            "⚠️ Supabase n'est pas encore configuré. <br>Ouvre index.html et renseigne SUPABASE_URL et SUPABASE_ANON_KEY avec les valeurs de ton projet."
+          );
+        } else {
+          setStatusMessage(
+            "⚠️ Impossible de se connecter à Supabase (vérifie ta connexion internet). "
+            + "<br><button class='btn btn-sm' onclick='retryLoad()'>Réessayer</button>"
+          );
+        }
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function updateWhoHeader() {
+      document.getElementById("headerAvatar").textContent = initials(currentMember);
+      document.getElementById("headerAvatar").style.background = currentMember.color;
+      document.getElementById("headerName").textContent = currentMember.name;
+    }
+
+    /* ==========================================================================
+       LÉGENDE & FILTRE
+       ========================================================================== */
+    function updateLegend() {
+      const legend = document.getElementById("legend");
+      legend.innerHTML = Object.values(MEMBERS).map(m => `
+        <div class="legend-item ${filterMember === m.id ? "active" : ""}">
+          <span class="dot" style="background:${m.color}"></span> ${m.name}
+        </div>`).join("");
+    }
+
+    function buildFilterOptions() {
+      const sel = document.getElementById("filter");
+      sel.innerHTML = '<option value="all">Tout le monde</option>' +
+        Object.values(MEMBERS).map(m =>
+          `<option value="${m.id}" ${filterMember === m.id ? "selected" : ""}>${m.name}</option>`).join("");
+    }
+
+    function applyFilter() {
+      filterMember = document.getElementById("filter").value;
+      updateLegend();
+      renderCalendar();
+    }
+
+    /* ==========================================================================
+       CALENDRIER — rendu du mois
+       ========================================================================== */
+    function renderCalendar() {
+      const grid = document.getElementById("calendarGrid");
+      grid.innerHTML = "";
+      document.getElementById("monthTitle").textContent =
+        `${MONTHS[currentMonth]} ${currentYear}`;
+
+      // En-tête des jours de la semaine
+      WEEKDAYS.forEach(w => {
+        const el = document.createElement("div");
+        el.className = "weekday";
+        el.textContent = w;
+        grid.appendChild(el);
+      });
+
+      // Premier jour du mois et nombre de jours (lundi = début de semaine)
+      const first = new Date(currentYear, currentMonth, 1);
+      const startWeekday = (first.getDay() + 6) % 7; // 0 = lundi
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const daysPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+      const today = todayStr();
+      const filtered = filterEvents(events);
+      const byDate = groupByDate(filtered);
+
+      const totalCells = Math.ceil((startWeekday + daysInMonth) / 7) * 7;
+
+      for (let i = 0; i < totalCells; i++) {
+        let dayNum, cellMonth;
+        if (i < startWeekday) {
+          // Jour du mois précédent
+          dayNum = daysPrevMonth - startWeekday + i + 1;
+          cellMonth = currentMonth - 1;
+        } else if (i < startWeekday + daysInMonth) {
+          // Jour du mois courant
+          dayNum = i - startWeekday + 1;
+          cellMonth = currentMonth;
+        } else {
+          // Jour du mois suivant
+          dayNum = i - startWeekday - daysInMonth + 1;
+          cellMonth = currentMonth + 1;
+        }
+
+        const year = new Date(currentYear, cellMonth, 1).getFullYear();
+        const iso = `${year}-${pad(cellMonth + 1)}-${pad(dayNum)}`;
+
+        const dayEl = document.createElement("div");
+        dayEl.className = "day";
+        if (cellMonth !== currentMonth) dayEl.classList.add("other-month");
+        if (iso === today) dayEl.classList.add("today");
+
+        dayEl.innerHTML = `<div class="day-number">${dayNum}</div>
+          <div class="day-events">${renderDayEvents(byDate[iso] || [])}</div>`;
+
+        // Clic sur le jour : ouvrir le formulaire de création
+        dayEl.addEventListener("click", () => openCreateModal(iso));
+        grid.appendChild(dayEl);
+      }
+    }
+
+    // Applique le filtre du membre sélectionné.
+    function filterEvents(list) {
+      if (filterMember === "all") return list;
+      return list.filter(e => e.owner === filterMember);
+    }
+
+    // Groupe les événements par date ("YYYY-MM-DD" -> tableau).
+    function groupByDate(list) {
+      const map = {};
+      list.forEach(e => {
+        (map[e.date] = map[e.date] || []).push(e);
+      });
+      // Tri par heure de début puis par titre
+      Object.values(map).forEach(arr =>
+        arr.sort((a, b) => (a.startTime || "99").localeCompare(b.startTime || "99")));
+      return map;
+    }
+
+    // HTML d'un petit événement dans une case du jour.
+    function renderDayEvents(list) {
+      return list.map(e => {
+        const owner = MEMBERS[e.owner] || MEMBERS.maman;
+        return `<div class="mini-event" title="${escapeHtml(e.title)} · ${e.owner}"
+                    style="--owner-color:${owner.color};--owner-bg:${owner.softBg};"
+                    data-id="${e.id}">${formatTime(e.startTime) ? formatTime(e.startTime) + " " : ""}${escapeHtml(e.title)}</div>`;
+      }).join("");
+    }
+
+    // Délégation de clic sur la grille pour ouvrir un événement existant.
+    document.getElementById("calendarGrid").addEventListener("click", ev => {
+      const mini = ev.target.closest(".mini-event");
+      if (mini) {
+        ev.stopPropagation();
+        const id = mini.getAttribute("data-id");
+        const evt = events.find(e => e.id === id);
+        if (evt) openDetailModal(evt);
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+    }
+
+    /* ==========================================================================
+       NAVIGATION DANS LES MOIS
+       ========================================================================== */
+    function prevMonth() {
+      currentMonth--;
+      if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      currentMonth++;
+      if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      renderCalendar();
+    }
+
+    function goToday() {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth();
+      renderCalendar();
+    }
+
+    /* ==========================================================================
+       MODAL — création / édition / consultation
+       --------------------------------------------------------------------------
+       Trois comportements selon le contexte :
+         • openCreateModal(iso)          -> formulaire de création vide
+         • openEditModal(event)          -> formulaire pré-rempli
+         • openDetailModal(event)        -> consultation en lecture seule
+       ========================================================================== */
+    function openCreateModal(iso) {
+      editingId = null;
+      document.getElementById("modalTitle").textContent = "Nouvel événement";
+      document.getElementById("btnSubmit").textContent = "Ajouter";
+      setFormFields({ title: "", date: iso, startTime: "", endTime: "", description: "" });
+      buildOwnerRow(currentMember);
+      setFormEditable(true);
+      document.getElementById("btnDelete").style.display = "none";
+      openModal();
+    }
+
+    function openEditModal(evt) {
+      editingId = evt.id;
+      document.getElementById("modalTitle").textContent = "Modifier l'événement";
+      document.getElementById("btnSubmit").textContent = "Enregistrer";
+      setFormFields(evt);
+      buildOwnerRow(MEMBERS[evt.owner]);
+      setFormEditable(true);
+      document.getElementById("btnDelete").style.display = "";
+      openModal();
+    }
+
+    function openDetailModal(evt) {
+      editingId = null;
+      document.getElementById("modalTitle").textContent = "Détails de l'événement";
+      document.getElementById("btnSubmit").textContent = "Modifier";
+      setFormFields(evt);
+      buildOwnerRow(MEMBERS[evt.owner]);
+      setFormEditable(false); // lecture seule d'abord
+      document.getElementById("btnDelete").style.display = "";
+      openModal();
+    }
+
+    function setFormFields(e) {
+      document.getElementById("eventId").value = e.id || "";
+      document.getElementById("title").value = e.title || "";
+      document.getElementById("date").value = e.date || todayStr();
+      document.getElementById("startTime").value = e.startTime || "";
+      document.getElementById("endTime").value = e.endTime || "";
+      document.getElementById("description").value = e.description || "";
+    }
+
+    function readFormFields() {
+      return {
+        title: document.getElementById("title").value.trim(),
+        date: document.getElementById("date").value,
+        startTime: document.getElementById("startTime").value,
+        endTime: document.getElementById("endTime").value,
+        description: document.getElementById("description").value.trim(),
+      };
+    }
+
+    // Affiche la personne responsable (automatique selon le compte actif).
+    function buildOwnerRow(member) {
+      const row = document.getElementById("ownerRow");
+      row.innerHTML = `
+        <div class="avatar" style="background:${member.color};">${initials(member)}</div>
+        <div class="meta">
+          <div class="name">${member.name}</div>
+          <div class="created">Ajouté par ${member.name}</div>
+        </div>`;
+    }
+
+    // Active ou désactive les champs du formulaire (mode consultation vs édition).
+    function setFormEditable(editable) {
+      ["title", "date", "startTime", "endTime", "description"].forEach(id => {
+        document.getElementById(id).readOnly = !editable;
+      });
+      document.getElementById("btnSubmit").textContent = editable
+        ? editingId ? "Enregistrer" : "Ajouter"
+        : "Modifier";
+    }
+
+    function openModal() {
+      document.getElementById("eventModal").classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("eventModal").classList.remove("open");
+      document.getElementById("deleteModal").classList.remove("open");
+    }
+
+    /* ==========================================================================
+       SOUMISSION DU FORMULAIRE (ajout / modification)
+       ========================================================================== */
+    // Flag : quand on bascule « consultation -> édition », le clic sur le
+    // bouton ne doit pas soumettre immédiatement le formulaire.
+    let togglingToEdit = false;
+
+    // Sauvegarde un événement (création OU modification) dans Supabase.
+    async function saveEvent(eventData) {
+      if (!supabaseClient) throw new Error("Supabase non configuré");
+      const row = camelToSnake(eventData);
+      const { error } = await supabaseClient
+        .from("events")
+        .upsert(row, { onConflict: "id" });
+      if (error) throw error;
+    }
+
+    // Déclenche l'envoi push sans bloquer la sauvegarde du calendrier.
+    // La fonction Supabase devra être déployée avant que les notifications
+    // soient effectivement envoyées.
+    async function notifyFamilyOfChange(eventData, action) {
+      if (!supabaseClient) return;
+      try {
+        await supabaseClient.functions.invoke("send-push", {
+          body: {
+            title: action === "created" ? "Nouvel événement familial" : "Événement modifié",
+            body: `${eventData.title} · ${formatDateFr(eventData.date)}${eventData.startTime ? ` à ${formatTime(eventData.startTime)}` : ""}`,
+            url: "./",
+            tag: `event-${eventData.id}`,
+            excludeMember: currentMember?.id || null
+          }
+        });
+      } catch (err) {
+        // Non bloquant : la sauvegarde de l'événement est déjà réussie.
+        console.warn("Envoi push indisponible :", err);
+      }
+    }
+
+    // Supprime un événement de Supabase.
+    async function removeEvent(id) {
+      if (!supabaseClient) throw new Error("Supabase non configuré");
+      const { error } = await supabaseClient.from("events").delete().eq("id", id);
+      if (error) throw error;
+    }
+
+    document.getElementById("eventForm").addEventListener("submit", async ev => {
+      ev.preventDefault();
+
+      if (togglingToEdit) {
+        togglingToEdit = false;
+        return; // on est passé en mode édition, on n'enregistre pas encore
+      }
+
+      const fields = readFormFields();
+
+      try {
+        if (editingId) {
+          // MODIFICATION d'un événement existant (la personne reste la même)
+          const evt = events.find(e => e.id === editingId);
+          if (!evt) return;
+          const updated = { ...evt, ...fields };
+          await saveEvent(updated);
+          // Mise à jour locale immédiate
+          Object.assign(evt, fields);
+          showToast("✏️ Événement modifié", "success");
+          notifyFamilyOfChange(evt, "updated");
+        } else {
+          // AJOUT d'un événement (la personne est TOUJOURS le compte sélectionné)
+          const newEvent = {
+            id: makeId(),
+            ...fields,
+            owner: currentMember.id,
+            createdAt: new Date().toISOString()
+          };
+          await saveEvent(newEvent);
+          events.push(newEvent);
+          showToast("🎉 Événement ajouté", "success");
+          notifyFamilyOfChange(newEvent, "created");
+        }
+
+        closeModal();
+        jumpToDate(fields.date);
+        renderCalendar();
+      } catch (err) {
+        console.error("Erreur de sauvegarde Supabase :", err);
+        showToast("⚠️ Impossible d'enregistrer (vérifie ta connexion)", "error", 4000);
+      }
+    });
+
+    // Date ISO "YYYY-MM-DD" -> affiche le mois correspondant. 
+    function jumpToDate(iso) {
+      const [y, m] = iso.split("-").map(Number);
+      currentYear = y;
+      currentMonth = m - 1;
+    }
+
+    // Suppression déclenchée depuis le bouton « Supprimer » du modal,
+    // avec confirmation préalable.
+    function deleteFromModal() {
+      const id = document.getElementById("eventId").value;
+      const evt = events.find(e => e.id === id);
+      if (evt) {
+        closeModal();
+        requestDelete(evt);
+      }
+    }
+
+    // Génère un identifiant unique simple.
+    function makeId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    /* ==========================================================================
+       SUPPRESSION (avec confirmation)
+       ========================================================================== */
+    function requestDelete(evt) {
+      document.getElementById("deleteText").textContent =
+        `« ${evt.title} » du ${formatDateFr(evt.date)} sera supprimé définitivement.`;
+      document.getElementById("deleteModal").classList.add("open");
+      pendingDeleteId = evt.id;
+    }
+
+    let pendingDeleteId = null;
+
+    document.getElementById("btnConfirmDelete").addEventListener("click", async () => {
+      if (!pendingDeleteId) return;
+      try {
+        await removeEvent(pendingDeleteId);
+        events = events.filter(e => e.id !== pendingDeleteId);
+        closeModal();
+        renderCalendar();
+        showToast("🗑️ Événement supprimé", "info");
+      } catch (err) {
+        console.error("Erreur de suppression Supabase :", err);
+        showToast("⚠️ Impossible de supprimer (vérifie ta connexion)", "error", 4000);
+      }
+      pendingDeleteId = null;
+    });
+
+    document.getElementById("btnCancelDelete").addEventListener("click", closeModal);
+
+    /* ==========================================================================
+       VUE "AUJOURD'HUI"
+       ========================================================================== */
+    function openTodayView() {
+      document.getElementById("todayView").classList.add("open");
+      const today = todayStr();
+      const list = groupByDate(events)[today] || [];
+      const container = document.getElementById("todayList");
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="empty-state">Aucun événement aujourd\'hui 🎈</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(e => {
+        const owner = MEMBERS[e.owner];
+        const time = formatTime(e.startTime)
+          ? `<div class="time">${formatTime(e.startTime)}</div>`
+          : `<div class="time">Toute la journée</div>`;
+        return `<div class="today-event" data-id="${e.id}">
+                  <span class="dot" style="width:12px;height:12px;border-radius:50%;background:${owner.color};flex-shrink:0;"></span>
+                  ${time}
+                  <div class="title">${escapeHtml(e.title)} <span style="color:var(--text-muted);font-size:0.75em;">· ${owner.name}</span></div>
+                </div>`;
+      }).join("");
+    }
+
+    function closeTodayView() {
+      document.getElementById("todayView").classList.remove("open");
+    }
+
+    document.getElementById("todayList").addEventListener("click", ev => {
+      const row = ev.target.closest(".today-event");
+      if (row) {
+        const evt = events.find(e => e.id === row.getAttribute("data-id"));
+        if (evt) openDetailModal(evt);
+      }
+    });
+
+    document.getElementById("todayView").addEventListener("click", ev => {
+      if (ev.target.id === "todayView" || ev.target.id === "btnCloseToday") closeTodayView();
+    });
+
+    /* ==========================================================================
+       NOTIFICATIONS (toasts)
+       ========================================================================== */
+    function showToast(message, type = "info", duration = 2600) {
+      const container = document.getElementById("toasts");
+      const toast = document.createElement("div");
+      toast.className = "toast " + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      // Retire automatiquement après quelques secondes (avec légère animation)
+      setTimeout(() => {
+        toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(10px)";
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    /* ==========================================================================
+       GESTIONNAIRES D'ÉVÉNEMENTS (boutons)
+       ========================================================================== */
+    document.getElementById("btnPrev").addEventListener("click", prevMonth);
+    document.getElementById("btnNext").addEventListener("click", nextMonth);
+
+    document.getElementById("btnAddSmall").addEventListener("click", () => {
+      // Ajoute pour aujourd'hui si le mois affiché est celui-ci, sinon au 1er du mois affiché
+      const now = new Date();
+      const iso = (now.getFullYear() === currentYear && now.getMonth() === currentMonth)
+        ? todayStr()
+        : `${currentYear}-${pad(currentMonth + 1)}-01`;
+      openCreateModal(iso);
+    });
+
+    document.getElementById("filter").addEventListener("change", applyFilter);
+    document.getElementById("btnSwitchAccount").addEventListener("click", () => {
+      currentMember = null;
+      document.getElementById("calendarScreen").style.display = "none";
+      document.getElementById("homeScreen").style.display = "flex";
+    });
+
+    document.getElementById("btnTodayView").addEventListener("click", openTodayView);
+
+    document.getElementById("btnCloseModal").addEventListener("click", closeModal);
+    document.getElementById("btnCancel").addEventListener("click", closeModal);
+
+    // Clic sur le fond du modal pour fermer
+    document.getElementById("eventModal").addEventListener("click", ev => {
+      if (ev.target.id === "eventModal") closeModal();
+    });
+
+    // Bouton principal du modal.
+    //   - en lecture seule (détails) : bascule en mode édition sans enregistrer
+    //   - en édition (create/edit)    : le formulaire soumet normalement
+    document.getElementById("btnSubmit").addEventListener("click", () => {
+      if (!editingId && document.getElementById("eventId").value) {
+        // On vient d'ouvrir en consultation -> bascule en édition
+        togglingToEdit = true;
+        const evt = events.find(e => e.id === document.getElementById("eventId").value);
+        if (evt) {
+          editingId = evt.id;
+          document.getElementById("modalTitle").textContent = "Modifier l'événement";
+          setFormEditable(true);
+        }
+      }
+    });
+
+    /* ==========================================================================
+       OVERLAY DE CHARGEMENT / STATUT
+       ========================================================================== */
+    function showLoading(show, spinner = true) {
+      document.getElementById("statusOverlay").style.display = show ? "flex" : "none";
+      document.getElementById("statusSpinner").style.display = spinner ? "block" : "none";
+    }
+
+    function setStatusMessage(html) {
+      document.getElementById("statusMessage").innerHTML = html;
+    }
+
+    function retryLoad() {
+      document.getElementById("statusOverlay").style.display = "none";
+      // Recharge la page (simple et fiable)
+      window.location.reload();
+    }
+
+    /* ==========================================================================
+       PWA — ENREGISTREMENT DU SERVICE WORKER
+       --------------------------------------------------------------------------
+       Rend le site installable comme une vraie application (mode standalone,
+       icône sur l'écran d'accueil). Nécessite HTTPS (ou localhost). S'il est
+       enregistré, toute mauvaise surprise est silencieusement ignorée pour ne
+       jamais bloquer l'affichage du calendrier.
+       ========================================================================== */
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((err) => {
+          console.warn("Service worker non enregistré :", err);
+        });
+      });
+    }
+
+    /* ==========================================================================
+       PWA — NOTIFICATIONS PUSH
+       --------------------------------------------------------------------------
+       L'inscription est prête, mais l'envoi nécessite encore une clé VAPID et
+       l'Edge Function Supabase fournie séparément. Aucun consentement n'est
+       demandé automatiquement : le membre choisit volontairement le bouton.
+
+       Les notifications push exigent HTTPS (ou localhost), un service worker,
+       une clé VAPID et un serveur qui déclenche les pushes.
+       ========================================================================== */
+    const PUSH_VAPID_PUBLIC_KEY = "BJTteAmTxFL6fgcPpk_u6CqApH1y-WwBamX4G5aN23KihfIm9m-JnGt-wihaG0w5LpH7Jqz_nJZNep7sp4gxeF8";
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = "=".repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+      return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    }
+
+    async function enablePushNotifications() {
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+        showToast("⚠️ Les notifications push ne sont pas disponibles ici", "error", 4000);
+        return;
+      }
+      if (PUSH_VAPID_PUBLIC_KEY.startsWith("REMPLACEZ")) {
+        showToast("ℹ️ Il faut d'abord configurer la clé VAPID", "info", 4000);
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          showToast("Les notifications sont désactivées", "info");
+          return;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_PUBLIC_KEY)
+        });
+        const json = subscription.toJSON();
+        const { error } = await supabaseClient.from("push_subscriptions").upsert({
+          endpoint: json.endpoint,
+          subscription: json,
+          member: currentMember.id
+        }, { onConflict: "endpoint" });
+        if (error) throw error;
+        showToast("🔔 Notifications activées sur cet appareil", "success", 3500);
+        document.getElementById("btnEnableNotifications").style.display = "none";
+      } catch (err) {
+        console.error("Erreur d'activation des notifications :", err);
+        showToast("⚠️ Impossible d'activer les notifications", "error", 4000);
+      }
+    }
+
+    function setupNotifications() {
+      const button = document.getElementById("btnEnableNotifications");
+      if (!("Notification" in window) || !("PushManager" in window) || !navigator.serviceWorker) return;
+      button.style.display = "inline-block";
+      button.addEventListener("click", enablePushNotifications);
+      if (Notification.permission === "granted") {
+        navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+          if (sub) button.style.display = "none";
+        }).catch(() => {});
+      }
+    }
+
+    /* ==========================================================================
+       INITIALISATION
+       ========================================================================== */
+    buildHome();
+    setupNotifications();
+
+    const supabaseOk = initSupabase();
+    if (!supabaseOk) {
+      // Cas très rare : le SDK ou la clé ne sont pas valides
+      setStatusMessage("⚠️ Supabase n'est pas correctement configuré. Ouvre index.html et vérifie les constantes SUPABASE_URL et SUPABASE_ANON_KEY.");
+      showLoading(true, false);
+    }
+  </script>
+</body>
+</html>
